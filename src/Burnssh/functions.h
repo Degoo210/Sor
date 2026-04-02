@@ -20,6 +20,7 @@ void print_history(HistoryList* history);
 
 // Funciones para procesos activos
 int find_free_slot(ActiveProcesses* active);
+void print_active(ActiveProcesses* active);
 void add_active_process(ActiveProcesses* active, pid_t pid, const char* name, int slot);
 void remove_active_process(ActiveProcesses* active, int slot);
 

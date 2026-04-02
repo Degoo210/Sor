@@ -85,6 +85,32 @@ int find_free_slot(ActiveProcesses* active) {
     return -1;
 }
 
+//Printear procesos activos
+void print_active(ActiveProcesses* active){
+    printf("\n\n=== PROCESOS ACTIVOS (%d/%d) ===\n", active->count, MAX_ACTIVE_PROCESSES);
+    if (active->count == 0) {
+        printf("No hay procesos activos\n");
+    } 
+    else {
+        printf("%-5s %-8s %-16s %-10s %-8s %-10s %-12s\n", 
+               "#", "PID", "Nombre", "Tiempo(s)", "Pausado", "Exit code", "Signal value");
+        int count = 0;
+        for (int i = 0; i < MAX_ACTIVE_PROCESSES; i++) {
+            if (active->processes[i].pid != 0) {
+                double time = get_seconds(&active->processes[i]);
+                printf("%-5d %-8d %-16s %-10.1f %-8d %-10d %-12d\n", 
+                       ++count,
+                       active->processes[i].pid, 
+                       active->processes[i].name, 
+                       time, 
+                       active->processes[i].paused,
+                       active->processes[i].exit_code,
+                       active->processes[i].signal_value);
+            }
+        }
+    }
+}
+
 // Agregar proceso activo
 void add_active_process(ActiveProcesses* active, pid_t pid, const char* name, int slot) {
     active->processes[slot].pid = pid;
@@ -95,6 +121,7 @@ void add_active_process(ActiveProcesses* active, pid_t pid, const char* name, in
     active->processes[slot].exit_code = -1;
     active->processes[slot].signal_value = -1;
     active->processes[slot].watcher_pid = 0;
+    active->processes[slot].paused_flag = NULL;
     active->count++;
 }
 

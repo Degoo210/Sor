@@ -22,7 +22,8 @@ typedef struct ProcessNode {
     int exit_code;            // Código de salida (-1 si sigue corriendo)
     int signal_value;         // Señal recibida (-1 si no recibió ninguna)
     struct ProcessNode* next; // Puntero al siguiente nodo
-    pid_t watcher_pid; // watcher para ejecutar en <time_max>
+    pid_t watcher_pid;        // watcher para ejecutar en <time_max>
+    int *paused_flag;
 } ProcessInfo;
 
 

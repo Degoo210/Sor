@@ -137,10 +137,56 @@ int main(int argc, char const *argv[]) {
             cmd_resume(input, &active_processes);
         }
         else if (strcmp(input[0], "exit") == 0) {
-            printf("Saliendo...\n");
+            for (int i = 0; i < MAX_ACTIVE_PROCESSES; i++) {
+
+                if (active_processes.processes[i].pid != 0) {
+                    kill(active_processes.processes[i].pid, SIGKILL);
+                    gettimeofday(&active_processes.processes[i].end, NULL);
+
+                    int status;
+                    waitpid(active_processes.processes[i].pid, &status, 0);
+
+                    if (WIFEXITED(status)) {
+                        active_processes.processes[i].exit_code = WEXITSTATUS(status);
+                    }
+                    if (WIFSIGNALED(status)) {
+                        active_processes.processes[i].signal_value = WTERMSIG(status);
+                    }
+                
+                    if (active_processes.processes[i].watcher_pid != 0) {                    
+                        kill(active_processes.processes[i].watcher_pid, SIGKILL);
+                    }
+                
+                    add_to_history_with_data(&history_list,
+                                     active_processes.processes[i].pid,
+                                     active_processes.processes[i].name,
+                                     active_processes.processes[i].start,
+                                     active_processes.processes[i].end,
+                                     active_processes.processes[i].exit_code,
+                                     active_processes.processes[i].signal_value);
+                    remove_active_process(&active_processes, i);
+                }
+                if (active_processes.processes[i].watcher_pid != 0) {                    
+                    kill(active_processes.processes[i].watcher_pid, SIGKILL);
+                }
+            }
+        
+            if (abort_watcher_pid != 0) {
+                kill(abort_watcher_pid, SIGKILL);
+            }
+
+            if (abort_watcher_pid != 0) {
+                pid_t tmp = abort_watcher_pid;
+                abort_watcher_pid = 0;
+                kill(tmp, SIGKILL);
+                waitpid(tmp, NULL, 0);
+            }
+
+            print_history(&history_list);
+            printf("\nSaliendo...\n\n");
             free_user_input(input);
             break;
-        }
+        }       
         else {
             printf("Comando %s no reconocido\n", input[0]);
         }
