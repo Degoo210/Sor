@@ -63,7 +63,6 @@ void cmd_launcher(char **input, ActiveProcesses* active, HistoryList* history, i
         close(pipefd[0]);
 
         if (n > 0) {
-            // execvp falló
             waitpid(pid, NULL, 0);
             printf("Ejecutable no encontrado o no se pudo lanzar\n");
             free(args);
@@ -185,7 +184,7 @@ void cmd_pause(char **input, ActiveProcesses* active) {
             gettimeofday(&active->processes[i].end, NULL);
 
             if (active->processes[i].paused_flag != NULL) {
-                *(active->processes[i].paused_flag) = 1;  // <-- agregar
+                *(active->processes[i].paused_flag) = 1;
             }   
 
             double time = get_seconds(&active->processes[i]);
@@ -243,7 +242,7 @@ void cmd_resume(char **input, ActiveProcesses* active) {
             active->processes[i].paused = 0;
             kill(pid_resume, SIGCONT);
             if (active->processes[i].paused_flag != NULL) {
-                *(active->processes[i].paused_flag) = 0;  // <-- agregar
+                *(active->processes[i].paused_flag) = 0;
             }
 
             double time = get_seconds(&active->processes[i]);
