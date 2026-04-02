@@ -1,25 +1,12 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
-
 int main(int argc, char *argv[]) {
-    printf("=== PROGRAMA DE PRUEBA ===\n");
-    printf("PID: %d\n", getpid());
-    
-    if (argc > 1) {
-        printf("Argumentos recibidos: ");
-        for (int i = 1; i < argc; i++) {
-            printf("%s ", argv[i]);
-        }
-        printf("\n");
+    int n = argc > 1 ? atoi(argv[1]) : 10;
+    for (int i = 0; i < n; i++) {
+        printf("%d\n", i);
+        sleep(1);
+        fflush(stdout);
     }
-    
-    printf("\nComenzando a contar...\n");
-    
-    for (int i = 1; i <= 10; i++) {
-        printf("Contando: %d\n", i);
-        sleep(1);  // Espera 1 segundo entre números
-    }
-    
-    printf("\n¡Cuenta terminada!\n");
     return 0;
 }

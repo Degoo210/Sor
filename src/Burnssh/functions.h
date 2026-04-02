@@ -24,7 +24,7 @@ void add_active_process(ActiveProcesses* active, pid_t pid, const char* name, in
 void remove_active_process(ActiveProcesses* active, int slot);
 
 // Funciones cmd
-void cmd_launcher(char **input, ActiveProcesses* active, HistoryList* history);
+void cmd_launcher(char **input, ActiveProcesses* active, HistoryList* history, int time_max);
 void cmd_status(ActiveProcesses* active, HistoryList* history);
 void cmd_abort(char **input, ActiveProcesses* active);
 void cmd_pause(char **input, ActiveProcesses* active);
@@ -32,4 +32,4 @@ void cmd_resume(char **input, ActiveProcesses* active);
 
 //Funciones otras
 double get_seconds(ProcessInfo *p);
-int is_number(char *str);
+int is_number(const char *str);

@@ -11,7 +11,7 @@
 #include "structs.h"
 #include "functions.h"
 
-void cmd_launcher(char **input, ActiveProcesses* active, HistoryList* history) {
+void cmd_launcher(char **input, ActiveProcesses* active, HistoryList* history, int time_max) {
     if (input[1] == NULL || strlen(input[1]) == 0) {
         printf("No se ha indicado ningún ejecutable\n");
         return;
@@ -70,6 +70,30 @@ void cmd_launcher(char **input, ActiveProcesses* active, HistoryList* history) {
         }
 
         add_active_process(active, pid, args[0], slot);
+
+        if (time_max > 0) {
+    pid_t target_pid = pid;
+    pid_t watcher = fork();
+    if (watcher == 0) {
+        sleep(time_max);
+        // verificar si sigue vivo
+        if (kill(target_pid, 0) == 0) {
+            printf("\nProceso %d superó el tiempo límite, enviando SIGTERM\n", target_pid);
+            fflush(stdout);
+            kill(target_pid, SIGTERM);
+            sleep(5);
+            // si sigue vivo después de 5 segundos, SIGKILL
+            if (kill(target_pid, 0) == 0) {
+                printf("\nProceso %d no terminó, enviando SIGKILL\n", target_pid);
+                fflush(stdout);
+                kill(target_pid, SIGKILL);
+            }
+        }
+        exit(0);
+    }
+    active->processes[slot].watcher_pid = watcher;
+}
+
         printf("Proceso lanzado: PID=%d, ejecutable='%s' (Activos ahora: %d/%d)\n", 
                pid, args[0], active->count, MAX_ACTIVE_PROCESSES);
     }
@@ -148,7 +172,7 @@ void cmd_abort(char **input, ActiveProcesses* active) {
     }
 
     abort_watcher_pid = watcher;
-    printf("Abort programado en %d segundos para %d procesos\n", time, abort_targets_count);
+    printf("Abort programado en %d segundos para %d procesos\n\n", time, abort_targets_count);
 }
 
 void cmd_pause(char **input, ActiveProcesses* active) {
@@ -173,12 +197,12 @@ void cmd_pause(char **input, ActiveProcesses* active) {
 
             double time = get_seconds(&active->processes[i]);
 
-            printf("Proceso pausado: PID = %d\n", pid_pause);
+            printf("Proceso pausado: PID = %d\n\n", pid_pause);
 
             printf("%-8s %-16s %-10s %-8s %-10s %-12s\n", 
                 "PID", "Nombre", "Tiempo(s)", "Pausado", "Exit code", "Signal value");
 
-            printf("%-8d %-16s %-10.1f %-8d %-10d %-12d\n",
+            printf("%-8d %-16s %-10.1f %-8d %-10d %-12d\n\n",
                             pid_pause,
                             active->processes[i].name,
                             time,
@@ -228,10 +252,10 @@ void cmd_resume(char **input, ActiveProcesses* active) {
 
             double time = get_seconds(&active->processes[i]);
 
+            printf("Proceso reanudado: PID = %d\n\n", pid_resume);
             printf("%-8s %-16s %-10s %-8s %-10s %-12s\n",
                 "PID", "Nombre", "Tiempo(s)", "Pausado", "Exit code", "Signal value");
-            printf("Proceso reanudado: PID = %d\n", pid_resume);
-            printf("%-8d %-16s %-10.1f %-8d %-10d %-12d\n",
+            printf("%-8d %-16s %-10.1f %-8d %-10d %-12d\n\n",
                 pid_resume,
                 active->processes[i].name,
                 time,

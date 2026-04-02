@@ -10,7 +10,7 @@
 #include "structs.h"
 #include "functions.h"
 
-// ========== FUNCIONES PARA LISTA HISTÓRICA ==========
+// FUNCIONES PARA EL HSITORIAL 
 
 // Agregar proceso al historial (sin límite)
 void add_to_history_with_data(HistoryList* history, pid_t pid, const char* name, 
@@ -33,13 +33,12 @@ void add_to_history_with_data(HistoryList* history, pid_t pid, const char* name,
     new_node->signal_value = signal_value;
     new_node->next = NULL;
     
-    // Insertar al inicio
     new_node->next = history->head;
     history->head = new_node;
     history->count++;
 }
 
-// Liberar toda la lista histórica
+// Liberar todo el historial
 void free_history(HistoryList* history) {
     ProcessInfo* current = history->head;
     while (current != NULL) {
@@ -70,7 +69,7 @@ void print_history(HistoryList* history) {
     printf("\n\n");
 }
 
-// ========== FUNCIONES PARA PROCESOS ACTIVOS ==========
+// FUNCIONES PARA PROCESOS ACTIVOS
 
 // Buscar un slot libre en procesos activos
 int find_free_slot(ActiveProcesses* active) {
@@ -95,6 +94,7 @@ void add_active_process(ActiveProcesses* active, pid_t pid, const char* name, in
     active->processes[slot].paused = 0;
     active->processes[slot].exit_code = -1;
     active->processes[slot].signal_value = -1;
+    active->processes[slot].watcher_pid = 0;
     active->count++;
 }
 
@@ -105,7 +105,7 @@ void remove_active_process(ActiveProcesses* active, int slot) {
     active->count--;
 }
 
-// ========== FUNCIONES EXISTENTES ACTUALIZADAS ==========
+// FUNCIONES EXISTENTES ACTUALIZADAS
 
 // Consigue el tiempo que lleva corriendo un proceso
 double get_seconds(ProcessInfo *p) {
@@ -122,9 +122,9 @@ double get_seconds(ProcessInfo *p) {
     return time;
 }
 
-int is_number(char *str){
+int is_number(const char *str){
     for(int i = 0; str[i] != '\0'; i++){
         if (!isdigit(str[i])) return 0;
     }
     return 1;
-} 
+}

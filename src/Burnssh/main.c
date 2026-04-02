@@ -16,6 +16,7 @@ HistoryList history_list;
 volatile pid_t abort_watcher_pid = 0;
 pid_t abort_targets[MAX_ACTIVE_PROCESSES];
 int abort_targets_count = 0;
+int time_max = 0;
 
 void sigchld_handler(int sig) {
     if (abort_watcher_pid != 0) {
@@ -83,6 +84,7 @@ void sigchld_handler(int sig) {
     }
 }
 
+
 int main(int argc, char const *argv[]) {
     active_processes.count = 0;
     history_list.head = NULL;
@@ -98,6 +100,15 @@ int main(int argc, char const *argv[]) {
     sa.sa_flags = SA_RESTART;
     sigaction(SIGCHLD, &sa, NULL);
 
+
+    if (argc > 1) {
+        if (!is_number(argv[1])) {
+            printf("\nArgumento inválido\n\n");
+            return 1;
+        }
+    time_max = atoi(argv[1]);
+}
+
     set_buffer();
 
     while (1) {
@@ -111,7 +122,7 @@ int main(int argc, char const *argv[]) {
         }
 
         if (strcmp(input[0], "launch") == 0) {
-            cmd_launcher(input, &active_processes, &history_list);
+            cmd_launcher(input, &active_processes, &history_list, time_max);
         }
         else if (strcmp(input[0], "status") == 0) {
             cmd_status(&active_processes, &history_list);
