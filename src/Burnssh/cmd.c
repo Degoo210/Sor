@@ -263,3 +263,31 @@ void cmd_resume(char **input, ActiveProcesses* active) {
     }
     printf("Por favor indica un pid lanzado por burnssh\n");
 }
+
+void cmd_shutdown(ActiveProcesses* active, HistoryList* history) {
+    if (abort_watcher_pid != 0) {
+        kill(abort_watcher_pid, SIGKILL);
+        waitpid(abort_watcher_pid, NULL, 0);
+        abort_watcher_pid = 0;
+    }
+ 
+    if (active->count == 0) {
+        printf("\nburnssh finalizado.\n");
+        print_active(active);
+        print_history(history);
+        free_history(history);
+        exit(0);
+    }
+ 
+    shutdown_targets_count = 0;
+    for (int i = 0; i < MAX_ACTIVE_PROCESSES; i++) {
+        if (active->processes[i].pid != 0 && active->processes[i].running) {
+            kill(active->processes[i].pid, SIGINT);
+            shutdown_targets[shutdown_targets_count++] = active->processes[i].pid;
+        }
+    }
+ 
+    shutdown_active = 1;
+    alarm(10);
+    printf("Shutdown en 10 segundos...\n");
+}

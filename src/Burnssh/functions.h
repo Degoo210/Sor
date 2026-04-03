@@ -13,6 +13,10 @@ extern volatile pid_t abort_watcher_pid;
 extern pid_t abort_targets[MAX_ACTIVE_PROCESSES];
 extern int abort_targets_count;
 
+extern int shutdown_active;
+extern pid_t shutdown_targets[MAX_ACTIVE_PROCESSES];
+extern int shutdown_targets_count;
+
 // Funciones para historial de procesos
 void add_to_history_with_data(HistoryList* history, pid_t pid, const char* name, struct timeval start, struct timeval end, int exit_code, int signal_value);
 void free_history(HistoryList* history);
@@ -30,6 +34,7 @@ void cmd_status(ActiveProcesses* active, HistoryList* history);
 void cmd_abort(char **input, ActiveProcesses* active);
 void cmd_pause(char **input, ActiveProcesses* active);
 void cmd_resume(char **input, ActiveProcesses* active);
+void cmd_shutdown(ActiveProcesses* active, HistoryList* history);
 
 //Funciones otras
 double get_seconds(ProcessInfo *p);

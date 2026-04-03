@@ -17,8 +17,13 @@ volatile pid_t abort_watcher_pid = 0;
 pid_t abort_targets[MAX_ACTIVE_PROCESSES];
 int abort_targets_count = 0;
 int time_max = 0;
+int shutdown_active = 0;
+pid_t shutdown_targets[MAX_ACTIVE_PROCESSES];
+int shutdown_targets_count = 0;
+
 
 void sigchld_handler(int sig) {
+
     if (abort_watcher_pid != 0) {
         int status;
         pid_t result = waitpid(abort_watcher_pid, &status, WNOHANG);
@@ -37,7 +42,7 @@ void sigchld_handler(int sig) {
                         double time = get_seconds(&active_processes.processes[j]);
                         printf("%-5d %-8d %-16s %-10.1f %-8d %-10d %-12d\n",
                             ++count,
-                            active_processes.processes[j].pid,
+                                active_processes.processes[j].pid,
                             active_processes.processes[j].name,
                             time,
                             active_processes.processes[j].paused,
@@ -84,8 +89,96 @@ void sigchld_handler(int sig) {
     }
 }
 
+void sigalrm_handler(int sig) {
+    if (abort_watcher_pid != 0) {
+        pid_t tmp = abort_watcher_pid;
+        abort_watcher_pid = 0;
+        kill(tmp, SIGKILL);
+        waitpid(tmp, NULL, 0);
+    }
+ 
+    for (int i = 0; i < MAX_ACTIVE_PROCESSES; i++) {
+        if (active_processes.processes[i].pid != 0 && active_processes.processes[i].running) {
+            kill(active_processes.processes[i].pid, SIGKILL);
+            gettimeofday(&active_processes.processes[i].end, NULL);
+
+            int status;
+            waitpid(active_processes.processes[i].pid, &status, 0);
+
+            if (WIFSIGNALED(status)) {
+                active_processes.processes[i].signal_value = WTERMSIG(status);
+            }
+
+            if (active_processes.processes[i].watcher_pid != 0) {
+                kill(active_processes.processes[i].watcher_pid, SIGKILL);
+                waitpid(active_processes.processes[i].watcher_pid, NULL, WNOHANG);
+            }
+
+            add_to_history_with_data(&history_list,
+                             active_processes.processes[i].pid,
+                             active_processes.processes[i].name,
+                             active_processes.processes[i].start,
+                             active_processes.processes[i].end,
+                             active_processes.processes[i].exit_code,
+                             active_processes.processes[i].signal_value);
+            remove_active_process(&active_processes, i);
+        }
+    }
+ 
+    printf("\nburnssh finalizado.\n");
+    print_active(&active_processes);
+    print_history(&history_list);
+    free_history(&history_list);
+    exit(0);
+}
+
+void sigint_handler(int sig) {
+
+    for (int i = 0; i < MAX_ACTIVE_PROCESSES; i++) {
+        if (active_processes.processes[i].pid != 0) {
+            kill(active_processes.processes[i].pid, SIGKILL);
+            gettimeofday(&active_processes.processes[i].end, NULL);
+
+            int status;
+            waitpid(active_processes.processes[i].pid, &status, 0);
+
+            if (WIFEXITED(status)) {
+                active_processes.processes[i].exit_code = WEXITSTATUS(status);
+            }
+            if (WIFSIGNALED(status)) {
+                active_processes.processes[i].signal_value = WTERMSIG(status);
+            }
+
+            if (active_processes.processes[i].watcher_pid != 0) {
+                kill(active_processes.processes[i].watcher_pid, SIGKILL);
+            }
+
+            add_to_history_with_data(&history_list,
+                             active_processes.processes[i].pid,
+                             active_processes.processes[i].name,
+                             active_processes.processes[i].start,
+                             active_processes.processes[i].end,
+                             active_processes.processes[i].exit_code,
+                             active_processes.processes[i].signal_value);
+            remove_active_process(&active_processes, i);
+        }
+    }
+
+    if (abort_watcher_pid != 0) {
+        pid_t tmp = abort_watcher_pid;
+        abort_watcher_pid = 0;
+        kill(tmp, SIGKILL);
+        waitpid(tmp, NULL, 0);
+    }
+
+    print_history(&history_list);
+    printf("\nSaliendo...\n\n");
+    free_history(&history_list);
+    exit(0);
+}
 
 int main(int argc, char const *argv[]) {
+
     active_processes.count = 0;
     history_list.head = NULL;
     history_list.count = 0;
@@ -100,6 +193,17 @@ int main(int argc, char const *argv[]) {
     sa.sa_flags = SA_RESTART;
     sigaction(SIGCHLD, &sa, NULL);
 
+    struct sigaction sa_alrm;
+    sa_alrm.sa_handler = sigalrm_handler;
+    sigemptyset(&sa_alrm.sa_mask);
+    sa_alrm.sa_flags = 0;
+    sigaction(SIGALRM, &sa_alrm, NULL);
+
+    struct sigaction sa_int;
+    sa_int.sa_handler = sigint_handler;
+    sigemptyset(&sa_int.sa_mask);
+    sa_int.sa_flags = 0;
+    sigaction(SIGINT, &sa_int, NULL);
 
     if (argc > 1) {
         if (!is_number(argv[1])) {
@@ -136,61 +240,12 @@ int main(int argc, char const *argv[]) {
         else if (strcmp(input[0], "resume") == 0) {
             cmd_resume(input, &active_processes);
         }
-        else if (strcmp(input[0], "exit") == 0) {
-            for (int i = 0; i < MAX_ACTIVE_PROCESSES; i++) {
-
-                if (active_processes.processes[i].pid != 0) {
-                    kill(active_processes.processes[i].pid, SIGKILL);
-                    gettimeofday(&active_processes.processes[i].end, NULL);
-
-                    int status;
-                    waitpid(active_processes.processes[i].pid, &status, 0);
-
-                    if (WIFEXITED(status)) {
-                        active_processes.processes[i].exit_code = WEXITSTATUS(status);
-                    }
-                    if (WIFSIGNALED(status)) {
-                        active_processes.processes[i].signal_value = WTERMSIG(status);
-                    }
-                
-                    if (active_processes.processes[i].watcher_pid != 0) {                    
-                        kill(active_processes.processes[i].watcher_pid, SIGKILL);
-                    }
-                
-                    add_to_history_with_data(&history_list,
-                                     active_processes.processes[i].pid,
-                                     active_processes.processes[i].name,
-                                     active_processes.processes[i].start,
-                                     active_processes.processes[i].end,
-                                     active_processes.processes[i].exit_code,
-                                     active_processes.processes[i].signal_value);
-                    remove_active_process(&active_processes, i);
-                }
-                if (active_processes.processes[i].watcher_pid != 0) {                    
-                    kill(active_processes.processes[i].watcher_pid, SIGKILL);
-                }
-            }
-        
-            if (abort_watcher_pid != 0) {
-                kill(abort_watcher_pid, SIGKILL);
-            }
-
-            if (abort_watcher_pid != 0) {
-                pid_t tmp = abort_watcher_pid;
-                abort_watcher_pid = 0;
-                kill(tmp, SIGKILL);
-                waitpid(tmp, NULL, 0);
-            }
-
-            print_history(&history_list);
-            printf("\nSaliendo...\n\n");
-            free_user_input(input);
-            break;
-        }       
+        else if (strcmp(input[0], "shutdown") == 0) {
+            cmd_shutdown(&active_processes, &history_list);
+        }     
         else {
             printf("Comando %s no reconocido\n", input[0]);
         }
-
         free_user_input(input);
     }
 
